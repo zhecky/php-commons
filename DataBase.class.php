@@ -17,7 +17,8 @@ class DataBase {
     private $stack = array();
 
     function __construct() {
-        $this->connect() && $this->select_db() && $this->query("SET NAMES UTF-8");
+        $this->connect() && $this->select_db();
+        $this->query("SET NAMES UTF8");
     }
 
     function __destruct() {
@@ -25,7 +26,7 @@ class DataBase {
     }
 
     private function connect() {
-        return ($this->link = @mysql_connect($this->host, $this->user, $this->pass, TRUE));
+        return ($this->link = @mysqli_connect($this->host, $this->user, $this->pass));
     }
 
     function getLink() {
@@ -33,11 +34,17 @@ class DataBase {
     }
 
     private function select_db() {
-        return mysql_select_db($this->base, $this->link);
+        return mysqli_select_db($this->link, $this->base);
     }
 
     function query($sql) {
-        return ($this->result = mysql_query($sql, $this->link));
+        $res = ($this->result = mysqli_query($this->link, $sql));
+        if(!$res) {
+            $err = $this->getError();
+            if($err){
+                error_log("[mysql] ".$err);
+            }
+        }
     }
 
     function insertItemQuery($table, $data) {
@@ -60,7 +67,7 @@ class DataBase {
         return $this->query($buffer);
     }
 
-    function updateQueryUnsafe($table, $update, $condition) {
+    function updateQueryScalar($table, $update, $condition) {
         $buffer = "UPDATE `{$table}` SET ";
 
         $needComma = false;
@@ -68,7 +75,7 @@ class DataBase {
             if($needComma){
                 $buffer .= ", ";
             }
-            $buffer .= "`{$key}` = {$value}";
+            $buffer .= "`{$key}` = '".$this->escapeString($value)."'";
             $needComma = true;
         }
         if(sizeof($condition) > 0){
@@ -79,11 +86,14 @@ class DataBase {
                 if($needAnd){
                     $buffer .= " AND ";
                 }
-                $buffer .= "`{$key}` = {$value}";
+                $buffer .= "`{$key}` = '".$this->escapeString($value)."'";
+
                 $needAnd = true;
             }
         }
         $buffer .= ';';
+
+        error_log($buffer);
 
 
         return $this->query($buffer);
@@ -95,21 +105,19 @@ class DataBase {
      * @return array current row and go to next
      */
     function getRow() {
-        return mysql_fetch_assoc($this->result);
+        return mysqli_fetch_assoc($this->result);
     }
 
     function numRows() {
-        return mysql_num_rows($this->result);
+        return mysqli_num_rows($this->result);
     }
 
     function affected() {
-        return mysql_affected_rows($this->link);
+        return mysqli_affected_rows($this->link);
     }
 
     function close() {
-	    if($this->link){
-	      return mysql_close($this->link);
-      }
+        return mysqli_close($this->link);
     }
 
     function isConnected() {
@@ -117,15 +125,15 @@ class DataBase {
     }
 
     function getError() {
-        return mysql_error();
+        return mysqli_error();
     }
 
     function getInsertedId() {
-        return mysql_insert_id($this->link);
+        return mysqli_insert_id($this->link);
     }
 
     function escapeString($str) {
-        return mysql_real_escape_string($str, $this->link);
+        return mysqli_real_escape_string($this->link, $str);
     }
 
     function pushResult(){

@@ -93,8 +93,33 @@ class DataBase {
         }
         $buffer .= ';';
 
-        error_log($buffer);
+        return $this->query($buffer);
+    }
+    
+    function updateQueryUnsafe($table, $update, $condition) {
+        $buffer = "UPDATE `{$table}` SET ";
 
+        $needComma = false;
+        foreach($update as $key=>$value){
+            if($needComma){
+                $buffer .= ", ";
+            }
+            $buffer .= "`{$key}` = {$value}";
+            $needComma = true;
+        }
+        if(sizeof($condition) > 0){
+            $buffer .= ' WHERE ';
+
+            $needAnd = false;
+            foreach($condition as $key=>$value){
+                if($needAnd){
+                    $buffer .= " AND ";
+                }
+                $buffer .= "`{$key}` = {$value}";
+                $needAnd = true;
+            }
+        }
+        $buffer .= ';';
 
         return $this->query($buffer);
     }

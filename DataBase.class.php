@@ -150,7 +150,7 @@ class DataBase {
     }
 
     function getError() {
-        return mysqli_error();
+        return mysqli_error($this->link);
     }
 
     function getInsertedId() {
